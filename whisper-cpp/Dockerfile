@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM debian:bookworm-slim
 ARG TARGETARCH
 ARG TARGETVARIANT
 
@@ -12,7 +12,6 @@ RUN \
     python3 \
     python3-pip \
     build-essential \
-    gcc-11 \
     wget \
     curl \
     ca-certificates \
@@ -21,12 +20,6 @@ RUN \
 
 # Copy local wyoming-whisper-cpp code
 COPY --from=wyoming-whisper-cpp . /usr/share/wyoming-whisper-cpp
-
-# Build with appropriate compiler
-ENV CC=gcc-11
-ENV CXX=g++-11
-ENV CFLAGS="-I. -O3 -DNDEBUG -std=c11 -fPIC -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -pthread"
-ENV CXXFLAGS="-I. -I./examples -O3 -DNDEBUG -std=c++11 -fPIC -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -pthread"
 
 RUN cd /usr/share/wyoming-whisper-cpp/whisper.cpp && \
     make clean && \
@@ -43,7 +36,6 @@ RUN cd /usr/share/wyoming-whisper-cpp/whisper.cpp && \
     "/usr/share/wyoming-whisper-cpp" \
     && apt-get purge -y --auto-remove \
     build-essential \
-    gcc-11 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /
@@ -52,3 +44,4 @@ COPY run.sh ./
 EXPOSE 10300
 
 ENTRYPOINT ["bash", "/run.sh"]
+
