@@ -1,0 +1,46 @@
+name: Build Whisper CPP Docker Image
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'whisper-cpp/**'
+      - '.github/workflows/whisper-cpp.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Checkout wyoming-whisper-cpp
+      uses: actions/checkout@v4
+      with:
+        repository: gotascii/wyoming-whisper-cpp
+        path: wyoming-whisper-cpp
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: whisper-cpp
+        build-contexts: |
+          wyoming-whisper-cpp=wyoming-whisper-cpp
+        platforms: linux/arm64
+        push: true
+        tags: ghcr.io/gotascii/wyoming-whisper-cpp:latest 
