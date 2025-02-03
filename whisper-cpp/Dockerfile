@@ -1,33 +1,49 @@
-FROM debian:bookworm-slim
+FROM ubuntu:22.04
 ARG TARGETARCH
 ARG TARGETVARIANT
 
 # Install wyoming-whisper-cpp
 WORKDIR /usr/src
-ENV WYOMING_WHISPER_CPP_VERSION=1.1.0
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 
 RUN \
     apt-get update \
     && apt-get install -y --no-install-recommends \
-        curl \
-        python3 \
-        python3-pip \
-        build-essential \
-    && curl -L -s \
-        "https://github.com/rhasspy/wyoming-whisper-cpp/archive/refs/tags/v${WYOMING_WHISPER_CPP_VERSION}.tar.gz" \
-        | tar -zxvf - -C /tmp \
-    && mv "/tmp/wyoming-whisper-cpp-${WYOMING_WHISPER_CPP_VERSION}" '/usr/share/wyoming-whisper-cpp' \
-    && make -C "/usr/share/wyoming-whisper-cpp/whisper.cpp" main \
+    python3 \
+    python3-pip \
+    build-essential \
+    gcc-11 \
+    wget \
+    curl \
+    ca-certificates \
+    python3-numpy \
+    python3-scipy
+
+# Copy local wyoming-whisper-cpp code
+COPY --from=wyoming-whisper-cpp . /usr/share/wyoming-whisper-cpp
+
+# Build with appropriate compiler
+ENV CC=gcc-11
+ENV CXX=g++-11
+ENV CFLAGS="-I. -O3 -DNDEBUG -std=c11 -fPIC -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -pthread"
+ENV CXXFLAGS="-I. -I./examples -O3 -DNDEBUG -std=c++11 -fPIC -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -pthread"
+
+RUN cd /usr/share/wyoming-whisper-cpp/whisper.cpp && \
+    make clean && \
+    make main \
+    && cd /usr/src \
     && pip3 install --no-cache-dir -U \
-        setuptools \
-        wheel \
+    setuptools \
+    wheel \
+    numpy \
+    scipy \
     && pip3 install --no-cache-dir \
-        --extra-index-url https://www.piwheels.org/simple \
-        -f . \
-        "/usr/share/wyoming-whisper-cpp" \
+    --extra-index-url https://www.piwheels.org/simple \
+    -f . \
+    "/usr/share/wyoming-whisper-cpp" \
     && apt-get purge -y --auto-remove \
-        build-essential \
+    build-essential \
+    gcc-11 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /
